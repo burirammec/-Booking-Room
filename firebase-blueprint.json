@@ -1,0 +1,133 @@
+{
+  "entities": {
+    "Room": {
+      "title": "Room",
+      "description": "Information about medical education center rooms available for booking",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "code": { "type": "string" },
+        "category": { "type": "string" },
+        "categoryName": { "type": "string" },
+        "building": { "type": "string" },
+        "floor": { "type": "string" },
+        "capacity": { "type": "number" },
+        "description": { "type": "string" },
+        "image": { "type": "string" },
+        "isAvailable": { "type": "boolean" }
+      },
+      "required": ["id", "name", "code", "category", "capacity"]
+    },
+    "Booking": {
+      "title": "Booking",
+      "description": "Room reservation request for clinical medical education activities",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "roomId": { "type": "string" },
+        "roomName": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "userRole": { "type": "string" },
+        "department": { "type": "string" },
+        "title": { "type": "string" },
+        "purpose": { "type": "string" },
+        "date": { "type": "string" },
+        "startTime": { "type": "string" },
+        "endTime": { "type": "string" },
+        "attendeesCount": { "type": "number" },
+        "contactPhone": { "type": "string" },
+        "status": { "type": "string" },
+        "adminNote": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "roomId", "userId", "date", "startTime", "endTime", "status"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile data including role and department",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string" },
+        "department": { "type": "string" },
+        "academicYear": { "type": "string" },
+        "phone": { "type": "string" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "ElectricityRoom": {
+      "title": "ElectricityRoom",
+      "description": "Dormitory room electricity meter unit details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "roomNumber": { "type": "string" },
+        "building": { "type": "string" },
+        "floor": { "type": "string" },
+        "occupantName": { "type": "string" },
+        "occupantRole": { "type": "string" },
+        "department": { "type": "string" },
+        "phone": { "type": "string" },
+        "currentMeter": { "type": "number" },
+        "ratePerUnit": { "type": "number" },
+        "baseServiceFee": { "type": "number" }
+      },
+      "required": ["id", "roomNumber", "occupantName", "currentMeter"]
+    },
+    "ElectricityBill": {
+      "title": "ElectricityBill",
+      "description": "Electricity bill and meter reading logs",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "roomId": { "type": "string" },
+        "roomNumber": { "type": "string" },
+        "building": { "type": "string" },
+        "occupantName": { "type": "string" },
+        "occupantRole": { "type": "string" },
+        "department": { "type": "string" },
+        "monthYear": { "type": "string" },
+        "previousMeter": { "type": "number" },
+        "currentMeter": { "type": "number" },
+        "unitsUsed": { "type": "number" },
+        "ratePerUnit": { "type": "number" },
+        "baseServiceFee": { "type": "number" },
+        "totalAmount": { "type": "number" },
+        "dueDate": { "type": "string" },
+        "status": { "type": "string" },
+        "recordedBy": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "roomId", "roomNumber", "monthYear", "totalAmount", "status"]
+    }
+  },
+  "firestore": {
+    "/rooms/{roomId}": {
+      "schema": { "$ref": "#/entities/Room" },
+      "description": "Medical education center room catalog"
+    },
+    "/bookings/{bookingId}": {
+      "schema": { "$ref": "#/entities/Booking" },
+      "description": "Room booking requests collection"
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User profile and role metadata"
+    },
+    "/electricity_rooms/{roomId}": {
+      "schema": { "$ref": "#/entities/ElectricityRoom" },
+      "description": "Dormitory rooms electricity meter catalog"
+    },
+    "/electricity_bills/{billId}": {
+      "schema": { "$ref": "#/entities/ElectricityBill" },
+      "description": "Dormitory electricity bills records"
+    }
+  }
+}

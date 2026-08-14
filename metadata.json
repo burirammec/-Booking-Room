@@ -1,0 +1,8 @@
+{
+  "name": "Remix Remix Remix ระบบจองห้อง ศูนย์แพทยศาสตรศึกษาชั้นคลินิก โรงพยาบาลบุรีรัมย์",
+  "description": "ระบบจองห้องเรียน ห้องปฏิบัติการ และห้องประชุม ศูนย์แพทยศาสตรศึกษาชั้นคลินิก โรงพยาบาลบุรีรัมย์ พร้อมระบบ Google Auth และกราฟวิเคราะห์ข้อมูล",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
