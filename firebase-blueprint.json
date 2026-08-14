@@ -106,6 +106,34 @@
         "createdAt": { "type": "string" }
       },
       "required": ["id", "roomId", "roomNumber", "monthYear", "totalAmount", "status"]
+    },
+    "AttendanceRecord": {
+      "title": "AttendanceRecord",
+      "description": "Duty and clinical work check-in logs for medical students, staff, and admins",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "userRole": { "type": "string" },
+        "department": { "type": "string" },
+        "academicYear": { "type": "string" },
+        "date": { "type": "string" },
+        "checkInTime": { "type": "string" },
+        "checkOutTime": { "type": "string" },
+        "shiftType": { "type": "string" },
+        "shiftName": { "type": "string" },
+        "location": { "type": "string" },
+        "status": { "type": "string" },
+        "note": { "type": "string" },
+        "adminNote": { "type": "string" },
+        "verifiedByAdmin": { "type": "boolean" },
+        "workingHours": { "type": "number" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "date", "checkInTime", "status"]
     }
   },
   "firestore": {
@@ -128,6 +156,10 @@
     "/electricity_bills/{billId}": {
       "schema": { "$ref": "#/entities/ElectricityBill" },
       "description": "Dormitory electricity bills records"
+    },
+    "/attendance_records/{attendanceId}": {
+      "schema": { "$ref": "#/entities/AttendanceRecord" },
+      "description": "Duty and clinical work check-in attendance records"
     }
   }
 }

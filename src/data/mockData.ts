@@ -10,7 +10,7 @@ export const INITIAL_ROOMS: Room[] = [
     building: 'อาคารศูนย์แพทยศาสตรศึกษาชั้นคลินิก',
     floor: 'ชั้น 9',
     capacity: 120,
-    description: 'ห้องบรรยายรวมขนาดใหญ่ ติดตั้งเครื่องเสียงมาตรฐาน พร้อมระบบฉายภาพโพรเจกเตอร์คู่ และระบบถ่ายทอดสด Hybrid Zoom',
+    description: 'ห้องบรรยายรวมขนาดใหญ่ ติดตั้งเครื่องเสียงมาตรฐาน พร้อมระบบฉายภาพโปรเจกเตอร์คู่ และระบบถ่ายทอดสด Hybrid Zoom',
     image: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&q=80&w=800',
     equipment: {
       projector: true,

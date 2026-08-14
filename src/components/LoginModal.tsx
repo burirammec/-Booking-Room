@@ -10,7 +10,8 @@ import {
   Building2, 
   GraduationCap, 
   Lock,
-  ArrowRight
+  ArrowRight,
+  UserPlus
 } from 'lucide-react';
 import { UserRole, UserProfile } from '../types';
 
@@ -20,6 +21,7 @@ interface LoginModalProps {
   onLoginWithGoogle: (targetRole?: UserRole) => Promise<void>;
   onSelectRole: (role: UserRole) => void;
   currentUser: UserProfile | null;
+  onOpenRegister?: () => void;
 }
 
 export const LoginModal: React.FC<LoginModalProps> = ({
@@ -27,7 +29,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   onClose,
   onLoginWithGoogle,
   onSelectRole,
-  currentUser
+  currentUser,
+  onOpenRegister
 }) => {
   const [selectedRole, setSelectedRole] = useState<UserRole>('user');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -86,6 +89,32 @@ export const LoginModal: React.FC<LoginModalProps> = ({
         {/* Content Body */}
         <div className="p-6 space-y-6 overflow-y-auto max-h-[80vh]">
           
+          {/* Sign Up Promotion Card */}
+          {onOpenRegister && (
+            <div className="p-3.5 bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-200 rounded-2xl flex items-center justify-between gap-3">
+              <div className="flex items-center space-x-2.5">
+                <div className="p-2 bg-teal-600 text-white rounded-xl">
+                  <UserPlus className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-teal-950">ยังไม่มีบัญชีผู้ใช้งาน (User)?</h4>
+                  <p className="text-[11px] text-teal-700">ลงทะเบียนสมาชิกใหม่ รอ Admin อนุมัติสิทธิ์</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenRegister();
+                }}
+                className="px-3 py-1.5 bg-teal-800 hover:bg-teal-900 text-white font-bold text-xs rounded-xl transition shadow-sm shrink-0 flex items-center space-x-1"
+              >
+                <span>สมัครสมาชิก</span>
+                <ArrowRight className="w-3 h-3" />
+              </button>
+            </div>
+          )}
+
           {/* Step 1: Select System Role */}
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2.5 flex items-center justify-between">
@@ -94,7 +123,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               
-              {/* Role 1: คนใช้ (User) */}
+              {/* Role 1: ผู้ใช้ (User) */}
               <button
                 type="button"
                 onClick={() => setSelectedRole('user')}
@@ -115,7 +144,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                   </div>
                   <div>
                     <span className="text-xs font-bold text-emerald-900 bg-emerald-100 px-1.5 py-0.5 rounded">ระบบที่ 1</span>
-                    <h3 className="text-sm font-bold text-slate-800">1. คนใช้ (User)</h3>
+                    <h3 className="text-sm font-bold text-slate-800">1. ผู้ใช้ (User)</h3>
                   </div>
                 </div>
                 <p className="text-[11px] text-slate-600 leading-relaxed">
@@ -123,7 +152,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                 </p>
               </button>
 
-              {/* Role 2: ระบบหลังบ้าน Admin */}
+              {/* Role 2: ระบบผู้จัดการ Admin */}
               <button
                 type="button"
                 onClick={() => setSelectedRole('admin')}
@@ -144,7 +173,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                   </div>
                   <div>
                     <span className="text-xs font-bold text-amber-900 bg-amber-100 px-1.5 py-0.5 rounded">ระบบที่ 2</span>
-                    <h3 className="text-sm font-bold text-slate-800">2. หลังบ้าน Admin</h3>
+                    <h3 className="text-sm font-bold text-slate-800">2. ผู้จัดการ Admin</h3>
                   </div>
                 </div>
                 <p className="text-[11px] text-slate-600 leading-relaxed">
@@ -171,7 +200,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                 </svg>
               </div>
               <span>
-                {isLoggingIn ? 'กำลังเชื่อมต่อ Google...' : `เข้าสู่ระบบด้วย Gmail (${selectedRole === 'admin' ? 'สิทธิ์หลังบ้าน Admin' : 'สิทธิ์คนใช้ User'})`}
+                {isLoggingIn ? 'กำลังเชื่อมต่อ Google...' : `เข้าสู่ระบบด้วย Gmail (${selectedRole === 'admin' ? 'สิทธิ์ผู้จัดการ Admin' : 'สิทธิ์ผู้ใช้ User'})`}
               </span>
               <ArrowRight className="w-4 h-4 text-emerald-200 group-hover:translate-x-1 transition-transform" />
             </button>
@@ -191,7 +220,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                 className="py-2.5 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl font-bold text-xs flex items-center justify-center space-x-1.5 transition"
               >
                 <User className="w-4 h-4 text-emerald-600" />
-                <span>1. เข้าแบบ "คนใช้ (User)"</span>
+                <span>1. เข้าแบบ "ผู้ใช้ (User)"</span>
               </button>
 
               <button
@@ -199,7 +228,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                 className="py-2.5 px-3 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-xl font-bold text-xs flex items-center justify-center space-x-1.5 transition"
               >
                 <ShieldCheck className="w-4 h-4 text-amber-600" />
-                <span>2. เข้าแบบ "หลังบ้าน Admin"</span>
+                <span>2. เข้าแบบ "ผู้จัดการ Admin"</span>
               </button>
             </div>
           </div>
@@ -211,10 +240,20 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           <span className="flex items-center gap-1">
             <Lock className="w-3.5 h-3.5 text-emerald-600" /> ปลอดภัยด้วย Firebase OAuth Google Security
           </span>
-          <span>ศูนย์แพทยศาสตรศึกษาชั้นคลินิก รพ.บุรีรัมย์</span>
+          {onOpenRegister ? (
+            <button 
+              onClick={() => { onClose(); onOpenRegister(); }}
+              className="text-teal-800 hover:underline font-bold"
+            >
+              สมัครสมาชิก User ใหม่
+            </button>
+          ) : (
+            <span>ศูนย์แพทยศาสตรศึกษาชั้นคลินิก รพ.บุรีรัมย์</span>
+          )}
         </div>
 
       </div>
     </div>
   );
 };
+

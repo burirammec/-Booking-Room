@@ -11,15 +11,18 @@ import { BookingFormModal } from './components/BookingFormModal';
 import { AnalyticsDashboard } from './components/AnalyticsDashboard';
 import { AdminManagement } from './components/AdminManagement';
 import { ElectricityManagement } from './components/ElectricityManagement';
+import { AttendanceManagement } from './components/AttendanceManagement';
 import { LoginModal } from './components/LoginModal';
+import { RegisterModal } from './components/RegisterModal';
 import { INITIAL_ROOMS, INITIAL_BOOKINGS } from './data/mockData';
 import { INITIAL_ELECTRICITY_ROOMS, INITIAL_ELECTRICITY_BILLS } from './data/mockElectricityData';
-import { Booking, Room, UserProfile, UserRole, ElectricityRoom, ElectricityBill } from './types';
+import { INITIAL_ATTENDANCE } from './data/mockAttendanceData';
+import { Booking, Room, UserProfile, UserRole, ElectricityRoom, ElectricityBill, AttendanceRecord } from './types';
 import { auth, loginWithGoogle, logoutUser, onAuthStateChanged } from './firebase';
 import { 
   syncInitialDataToFirestore, 
   subscribeToBookings, 
-  subscribeToRooms,
+  subscribeToRooms, 
   addBookingToFirestore, 
   updateBookingInFirestore,
   updateBookingStatusInFirestore,
@@ -40,14 +43,23 @@ import {
   deleteElectricityRoomFromFirestore
 } from './services/electricityService';
 import {
+  syncInitialAttendanceToFirestore,
+  subscribeToAttendance,
+  addAttendanceToFirestore,
+  updateAttendanceInFirestore,
+  deleteAttendanceFromFirestore
+} from './services/attendanceService';
+import {
   syncInitialUsersToFirestore,
   subscribeToUsers,
   addUserToFirestore,
   updateUserInFirestore,
-  deleteUserFromFirestore
+  deleteUserFromFirestore,
+  registerUserInFirestore
 } from './services/userService';
+
 import { INITIAL_USERS } from './data/mockUserData';
-import { Building2, Phone, Mail, GraduationCap, CheckCircle } from 'lucide-react';
+import { Building2, Phone, Mail, GraduationCap, CheckCircle, AlertTriangle, Clock, UserPlus } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>('analytics');
@@ -56,12 +68,14 @@ export default function App() {
   const [users, setUsers] = useState<UserProfile[]>(INITIAL_USERS);
   const [electricityRooms, setElectricityRooms] = useState<ElectricityRoom[]>(INITIAL_ELECTRICITY_ROOMS);
   const [electricityBills, setElectricityBills] = useState<ElectricityBill[]>(INITIAL_ELECTRICITY_BILLS);
+  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>(INITIAL_ATTENDANCE);
   const [selectedRoomToBook, setSelectedRoomToBook] = useState<Room | null>(null);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
 
-  // User state - 2 systems: 'user' (คนใช้) and 'admin' (หลังบ้าน admin)
+  // User state - 2 systems: 'user' (คนใช้) and 'admin' (ผู้จัดการ admin)
   const [currentUser, setCurrentUser] = useState<UserProfile | null>({
     uid: 'demo-user-01',
     displayName: 'นศพ. ธนกฤต มั่นคง',
@@ -77,6 +91,7 @@ export default function App() {
     syncInitialDataToFirestore();
     syncElectricityDataToFirestore();
     syncInitialUsersToFirestore();
+    syncInitialAttendanceToFirestore();
 
     const unsubscribeBookings = subscribeToBookings((data) => {
       setBookings(data);
@@ -95,6 +110,9 @@ export default function App() {
     const unsubscribeElecBills = subscribeToElectricityBills((data) => {
       setElectricityBills(data);
     });
+    const unsubscribeAttendance = subscribeToAttendance((data) => {
+      setAttendanceRecords(data);
+    });
 
     return () => {
       unsubscribeBookings();
@@ -102,8 +120,10 @@ export default function App() {
       unsubscribeUsers();
       unsubscribeElecRooms();
       unsubscribeElecBills();
+      unsubscribeAttendance();
     };
   }, []);
+
 
   // Firebase auth state listener
   useEffect(() => {
@@ -146,7 +166,7 @@ export default function App() {
           academicYear: assignedRole === 'admin' ? 'ผู้ดูแลระบบ (Admin)' : 'ผู้ใช้งานระบบ',
           phone: '081-123-4567'
         });
-        showToast(`เข้าสู่ระบบสำเร็จด้วย Gmail: ${user.displayName || user.email} (${assignedRole === 'admin' ? 'สิทธิ์หลังบ้าน Admin' : 'สิทธิ์คนใช้ User'})`);
+        showToast(`เข้าสู่ระบบสำเร็จด้วย Gmail: ${user.displayName || user.email} (${assignedRole === 'admin' ? 'สิทธิ์ผู้จัดการ Admin' : 'สิทธิ์คนใช้ User'})`);
       }
     } catch (err) {
       console.warn('Fallback login initialized:', err);
@@ -156,11 +176,11 @@ export default function App() {
         displayName: 'ผู้ใช้งาน Gmail (Demo)',
         email: 'buriram.mec@cpird.in.th',
         role: assignedRole,
-        department: assignedRole === 'admin' ? 'ผู้ดูแลระบบ (Admin หลังบ้าน)' : 'ผู้ใช้งานทั่วไป (User)',
+        department: assignedRole === 'admin' ? 'ผู้ดูแลระบบ (Admin ผู้จัดการ)' : 'ผู้ใช้งานทั่วไป (User)',
         academicYear: assignedRole === 'admin' ? 'เจ้าหน้าที่ Admin' : 'นักศึกษาแพทย์/บุคลากร',
         phone: '081-234-5678'
       });
-      showToast(`เข้าสู่ระบบสิทธิ์ ${assignedRole === 'admin' ? '2. หลังบ้าน Admin' : '1. คนใช้ (User)'} เรียบร้อยแล้ว`, 'info');
+      showToast(`เข้าสู่ระบบสิทธิ์ ${assignedRole === 'admin' ? '2. ผู้จัดการ Admin' : '1. คนใช้ (User)'} เรียบร้อยแล้ว`, 'info');
     }
   };
 
@@ -185,7 +205,7 @@ export default function App() {
         academicYear: 'ผู้ดูแลระบบ (Admin)',
         phone: '044-602-000'
       });
-      showToast('สลับเข้าสู่ระบบ: 2. ระบบหลังบ้าน (Admin)');
+      showToast('สลับเข้าสู่ระบบ: 2. ระบบผู้จัดการ (Admin)');
     } else {
       setCurrentUser({
         uid: 'usr-user-01',
@@ -315,7 +335,24 @@ export default function App() {
     await deleteElectricityRoomFromFirestore(roomId);
   };
 
+  // Attendance Handlers
+  const handleAddAttendance = async (record: AttendanceRecord) => {
+    setAttendanceRecords(prev => [record, ...prev]);
+    await addAttendanceToFirestore(record);
+  };
+
+  const handleUpdateAttendance = async (id: string, data: Partial<AttendanceRecord>) => {
+    setAttendanceRecords(prev => prev.map(r => r.id === id ? { ...r, ...data } : r));
+    await updateAttendanceInFirestore(id, data);
+  };
+
+  const handleDeleteAttendance = async (id: string) => {
+    setAttendanceRecords(prev => prev.filter(r => r.id !== id));
+    await deleteAttendanceFromFirestore(id);
+  };
+
   // User CRUD Handlers
+
   const handleAddUser = async (newUser: UserProfile) => {
     setUsers(prev => [...prev, newUser]);
     showToast(`เพิ่มผู้ใช้งาน "${newUser.displayName}" สำเร็จ (บันทึกลง Firestore)`);
@@ -337,6 +374,11 @@ export default function App() {
   const handleSelectUserPersona = (userPersona: UserProfile) => {
     setCurrentUser(userPersona);
     showToast(`สลับใช้งานระบบในนาม: ${userPersona.displayName} (${userPersona.role})`);
+  };
+
+  const handleRegisterSuccess = (newUser: UserProfile) => {
+    setUsers(prev => [newUser, ...prev]);
+    showToast(`ส่งคำขอสมัครสมาชิกของ "${newUser.displayName}" เรียบร้อยแล้ว (รอเจ้าหน้าที่ Admin อนุมัติสิทธิ์)`, 'info');
   };
 
   const pendingCount = bookings.filter(b => b.status === 'pending').length;
@@ -366,8 +408,48 @@ export default function App() {
         onLogout={handleLogout}
         onSelectRole={handleRoleChange}
         onOpenLoginModal={() => setIsLoginModalOpen(true)}
+        onOpenRegisterModal={() => setIsRegisterModalOpen(true)}
         pendingCount={pendingCount}
       />
+
+      {/* Account Pending/Rejected Warning Banner */}
+      {currentUser && currentUser.approvalStatus === 'pending' && (
+        <div className="bg-amber-500 text-slate-950 px-4 py-2.5 shadow-sm text-xs font-semibold flex items-center justify-between border-b border-amber-600">
+          <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-3">
+            <div className="flex items-center space-x-2">
+              <Clock className="w-4 h-4 animate-spin text-slate-950 shrink-0" />
+              <span>
+                <strong>สถานะบัญชี:</strong> คำขอสมัครสมาชิกของท่าน (<span className="underline font-bold">{currentUser.displayName}</span>) อยู่ระหว่างรอการตรวจสอบและอนุมัติสิทธิ์จากเจ้าหน้าที่ผู้ดูแลระบบ (Admin)
+              </span>
+            </div>
+            <button
+              onClick={() => setIsRegisterModalOpen(true)}
+              className="px-3 py-1 bg-slate-900 text-white rounded-lg text-[11px] font-bold hover:bg-slate-800 transition shrink-0"
+            >
+              ตรวจสอบสถานะคำขอ
+            </button>
+          </div>
+        </div>
+      )}
+
+      {currentUser && currentUser.approvalStatus === 'rejected' && (
+        <div className="bg-rose-600 text-white px-4 py-2.5 shadow-sm text-xs font-semibold flex items-center justify-between border-b border-rose-700">
+          <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-3">
+            <div className="flex items-center space-x-2">
+              <AlertTriangle className="w-4 h-4 text-rose-200 shrink-0" />
+              <span>
+                <strong>แจ้งเตือน:</strong> คำขอสมัครสมาชิกของท่านไม่ผ่านการอนุมัติ: <em>"{currentUser.rejectionReason || 'ข้อมูลไม่ถูกต้อง'}"</em> กรุณาติดต่อศูนย์แพทยศาสตรศึกษาชั้นคลินิก
+              </span>
+            </div>
+            <button
+              onClick={() => setIsRegisterModalOpen(true)}
+              className="px-3 py-1 bg-white text-rose-700 rounded-lg text-[11px] font-bold hover:bg-rose-50 transition shrink-0"
+            >
+              ยื่นสมัครใหม่
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -426,7 +508,20 @@ export default function App() {
           />
         )}
 
+        {activeTab === 'attendance' && (
+          <AttendanceManagement
+            currentUser={currentUser}
+            attendanceRecords={attendanceRecords}
+            onAddAttendance={handleAddAttendance}
+            onUpdateAttendance={handleUpdateAttendance}
+            onDeleteAttendance={handleDeleteAttendance}
+            onSelectRole={handleRoleChange}
+            showToast={showToast}
+          />
+        )}
+
         {activeTab === 'admin' && (
+
           <AdminManagement
             bookings={bookings}
             rooms={rooms}
@@ -454,6 +549,21 @@ export default function App() {
         onLoginWithGoogle={handleLoginGoogle}
         onSelectRole={handleRoleChange}
         currentUser={currentUser}
+        onOpenRegister={() => {
+          setIsLoginModalOpen(false);
+          setIsRegisterModalOpen(true);
+        }}
+      />
+
+      {/* Register / Member Signup Modal */}
+      <RegisterModal
+        isOpen={isRegisterModalOpen}
+        onClose={() => setIsRegisterModalOpen(false)}
+        onRegisterSuccess={handleRegisterSuccess}
+        onOpenLogin={() => {
+          setIsRegisterModalOpen(false);
+          setIsLoginModalOpen(true);
+        }}
       />
 
       {/* Booking Form Modal */}

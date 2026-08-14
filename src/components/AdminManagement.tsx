@@ -33,10 +33,17 @@ import {
   Sliders,
   Mail,
   GraduationCap,
-  ShieldAlert
+  ShieldAlert,
+  FileDown,
+  Clock3,
+  CheckCheck,
+  FileText,
+  BadgeAlert,
+  Sparkles
 } from 'lucide-react';
-import { Booking, Room, RoomCategory, UserRole, UserProfile, UserPermissions } from '../types';
+import { Booking, Room, RoomCategory, UserRole, UserProfile, UserPermissions, UserApprovalStatus } from '../types';
 import { DEFAULT_ROLE_PERMISSIONS } from '../data/mockUserData';
+
 
 interface AdminProps {
   bookings: Booking[];
@@ -88,7 +95,20 @@ export const AdminManagement: React.FC<AdminProps> = ({
   const [userSearch, setUserSearch] = useState('');
   const [userRoleFilter, setUserRoleFilter] = useState<string>('all');
   const [userStatusFilter, setUserStatusFilter] = useState<string>('all');
-  const [userSubTab, setUserSubTab] = useState<'list' | 'roles_matrix'>('list');
+  const [userSubTab, setUserSubTab] = useState<'list' | 'pending_approvals' | 'roles_matrix'>('list');
+
+  // Pending Registrations Filter & Modals
+  const [pendingFilter, setPendingFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
+  const [pendingSearch, setPendingSearch] = useState('');
+  const [rejectModalUser, setRejectModalUser] = useState<UserProfile | null>(null);
+  const [rejectReasonText, setRejectReasonText] = useState('');
+  const [approveModalUser, setApproveModalUser] = useState<UserProfile | null>(null);
+  const [approveSelectedRole, setApproveSelectedRole] = useState<UserRole>('user');
+  const [approveStudentId, setApproveStudentId] = useState('');
+  const [approveDepartment, setApproveDepartment] = useState('');
+  const [approveAcademicYear, setApproveAcademicYear] = useState('');
+  const [approveNote, setApproveNote] = useState('');
+  const [isProcessingApproval, setIsProcessingApproval] = useState(false);
 
   // Modals state
   const [isRoomModalOpen, setIsRoomModalOpen] = useState(false);
@@ -266,7 +286,7 @@ export const AdminManagement: React.FC<AdminProps> = ({
       requestedEquipment: ['โปรเจกเตอร์ / จอภาพ', 'ไมโครโฟน / ลำโพง'],
       contactPhone: '044-602-000',
       status: 'approved',
-      adminNote: 'บันทึกคำขอโดยผู้ดูแลระบบหลังบ้าน',
+      adminNote: 'บันทึกคำขอโดยผู้ดูแลระบบผู้จัดการ',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     });
@@ -401,6 +421,100 @@ export const AdminManagement: React.FC<AdminProps> = ({
     setIsRolePolicyModalOpen(false);
   };
 
+  // --- Registration Approval & Rejection Handlers ---
+  const handleOpenApproveModal = (user: UserProfile) => {
+    setApproveModalUser(user);
+    setApproveSelectedRole(user.role || 'student');
+    setApproveStudentId(user.studentId || '');
+    setApproveDepartment(user.department || 'แพทยศาสตรศึกษาชั้นคลินิก');
+    setApproveAcademicYear(user.academicYear || 'ชั้นปีที่ 4 (Extern/Clinic)');
+  };
+
+  const handleConfirmApproveUser = async () => {
+    if (!approveModalUser) return;
+    setIsProcessingApproval(true);
+    try {
+      const defaultPerms = DEFAULT_ROLE_PERMISSIONS[approveSelectedRole]?.defaultPermissions || DEFAULT_ROLE_PERMISSIONS.user.defaultPermissions;
+      await onUpdateUser(approveModalUser.uid, {
+        approvalStatus: 'approved',
+        status: 'active',
+        role: approveSelectedRole,
+        studentId: approveStudentId,
+        department: approveDepartment,
+        academicYear: approveAcademicYear,
+        approvedAt: new Date().toISOString(),
+        approvedBy: currentUser?.email || currentUser?.displayName || 'admin@cpird.in.th',
+        permissions: defaultPerms
+      });
+      setApproveModalUser(null);
+    } catch (err) {
+      console.error('Approval failed:', err);
+    } finally {
+      setIsProcessingApproval(false);
+    }
+  };
+
+  const handleQuickApprove = async (user: UserProfile) => {
+    const defaultPerms = DEFAULT_ROLE_PERMISSIONS[user.role || 'user']?.defaultPermissions || DEFAULT_ROLE_PERMISSIONS.user.defaultPermissions;
+    await onUpdateUser(user.uid, {
+      approvalStatus: 'approved',
+      status: 'active',
+      approvedAt: new Date().toISOString(),
+      approvedBy: currentUser?.email || currentUser?.displayName || 'admin@cpird.in.th',
+      permissions: defaultPerms
+    });
+  };
+
+  const handleOpenRejectModal = (user: UserProfile) => {
+    setRejectModalUser(user);
+    setRejectReasonText('ไม่พบบันทึกในฐานข้อมูลนักศึกษาแพทย์ หรือข้อมูลไม่ครบถ้วน');
+  };
+
+  const handleConfirmRejectUser = async () => {
+    if (!rejectModalUser) return;
+    setIsProcessingApproval(true);
+    try {
+      await onUpdateUser(rejectModalUser.uid, {
+        approvalStatus: 'rejected',
+        status: 'inactive',
+        rejectionReason: rejectReasonText,
+        approvedBy: currentUser?.email || currentUser?.displayName || 'admin@cpird.in.th'
+      });
+      setRejectModalUser(null);
+      setRejectReasonText('');
+    } catch (err) {
+      console.error('Rejection failed:', err);
+    } finally {
+      setIsProcessingApproval(false);
+    }
+  };
+
+  const handleExportRegistrationsCSV = () => {
+    const headers = ['UID', 'ชื่อ-นามสกุล', 'อีเมล', 'รหัสนักศึกษา/บุคลากร', 'บทบาท', 'สังกัด/ภาควิชา', 'ชั้นปี/ตำแหน่ง', 'เบอร์โทร', 'สถานะการอนุมัติ', 'เหตุผลในการสมัคร', 'วันที่สมัคร'];
+    const rows = users.map(u => [
+      u.uid,
+      `"${u.displayName}"`,
+      u.email,
+      `"${u.studentId || '-'}"`,
+      u.role,
+      `"${u.department || '-'}"`,
+      `"${u.academicYear || '-'}"`,
+      `"${u.phone || '-'}"`,
+      u.approvalStatus || 'approved',
+      `"${(u.registrationReason || '-').replace(/"/g, '""')}"`,
+      u.registeredAt || u.createdAt || '-'
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `buriram_mec_users_registrations_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Confirm Delete Handler
   const handleConfirmDelete = async () => {
     if (!deleteConfirm) return;
@@ -442,9 +556,22 @@ export const AdminManagement: React.FC<AdminProps> = ({
     return matchesRole && matchesStatus && matchesSearch;
   });
 
+  // Filtered pending registrations list
+  const filteredPendingUsers = users.filter(u => {
+    const matchesApproval = pendingFilter === 'all' || (u.approvalStatus || 'approved') === pendingFilter;
+    const matchesSearch = u.displayName.toLowerCase().includes(pendingSearch.toLowerCase()) ||
+                          u.email.toLowerCase().includes(pendingSearch.toLowerCase()) ||
+                          (u.studentId && u.studentId.toLowerCase().includes(pendingSearch.toLowerCase())) ||
+                          u.department.toLowerCase().includes(pendingSearch.toLowerCase()) ||
+                          (u.phone && u.phone.includes(pendingSearch));
+    return matchesApproval && matchesSearch;
+  });
+
   const pendingCount = bookings.filter(b => b.status === 'pending').length;
-  const activeUsersCount = users.filter(u => u.status !== 'inactive').length;
+  const pendingRegistrationsCount = users.filter(u => u.approvalStatus === 'pending').length;
+  const activeUsersCount = users.filter(u => u.status !== 'inactive' && u.approvalStatus !== 'rejected').length;
   const adminUsersCount = users.filter(u => u.role === 'admin').length;
+
 
   return (
     <div className="space-y-6">
@@ -462,7 +589,7 @@ export const AdminManagement: React.FC<AdminProps> = ({
               <span className="text-[10px] text-emerald-300/80">v2.5 (User Roles & RBAC Sync)</span>
             </div>
             <h1 className="text-xl font-bold tracking-tight text-white mt-1">
-              ระบบบริหารหลังบ้าน และกำหนดสิทธิ์ผู้ใช้งาน (Roles & Permissions)
+              ระบบบริหารผู้จัดการ และกำหนดสิทธิ์ผู้ใช้งาน (Roles & Permissions)
             </h1>
             <p className="text-xs text-emerald-200/80 mt-0.5">
               ศูนย์แพทยศาสตรศึกษาชั้นคลินิก โรงพยาบาลบุรีรัมย์
@@ -898,6 +1025,28 @@ export const AdminManagement: React.FC<AdminProps> = ({
               </div>
             </div>
 
+            <div 
+              onClick={() => setUserSubTab('pending_approvals')}
+              className={`p-4 rounded-2xl border shadow-sm flex items-center justify-between cursor-pointer transition ${
+                pendingRegistrationsCount > 0 
+                  ? 'bg-amber-50/80 border-amber-300 ring-2 ring-amber-400/30' 
+                  : 'bg-white border-slate-200'
+              }`}
+            >
+              <div>
+                <div className="text-[11px] font-bold text-amber-700 flex items-center gap-1">
+                  <span>รอ Admin อนุมัติสิทธิ์</span>
+                  {pendingRegistrationsCount > 0 && (
+                    <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping inline-block" />
+                  )}
+                </div>
+                <div className="text-2xl font-black text-amber-900 mt-0.5">{pendingRegistrationsCount} คำขอ</div>
+              </div>
+              <div className="p-3 bg-amber-100/80 text-amber-800 rounded-xl">
+                <Clock3 className="w-5 h-5" />
+              </div>
+            </div>
+
             <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
               <div>
                 <div className="text-[11px] font-bold text-emerald-600">ใช้งานปกติ (Active)</div>
@@ -905,16 +1054,6 @@ export const AdminManagement: React.FC<AdminProps> = ({
               </div>
               <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
                 <UserCheck className="w-5 h-5" />
-              </div>
-            </div>
-
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-              <div>
-                <div className="text-[11px] font-bold text-amber-600">ผู้ดูแลระบบ (Admin)</div>
-                <div className="text-2xl font-black text-amber-700 mt-0.5">{adminUsersCount} คน</div>
-              </div>
-              <div className="p-3 bg-amber-50 text-amber-600 rounded-xl">
-                <ShieldCheck className="w-5 h-5" />
               </div>
             </div>
 
@@ -933,7 +1072,26 @@ export const AdminManagement: React.FC<AdminProps> = ({
 
           {/* Sub Navbar & Controls */}
           <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-center space-x-2 bg-slate-100 p-1 rounded-xl text-xs font-bold">
+            <div className="flex items-center flex-wrap gap-2 bg-slate-100 p-1 rounded-xl text-xs font-bold">
+              <button
+                onClick={() => setUserSubTab('pending_approvals')}
+                className={`flex items-center space-x-1.5 px-4 py-2 rounded-lg transition relative ${
+                  userSubTab === 'pending_approvals'
+                    ? 'bg-amber-600 text-white shadow-sm font-bold'
+                    : 'text-slate-700 hover:text-slate-900'
+                }`}
+              >
+                <Clock3 className="w-4 h-4" />
+                <span>คำขอสมัครสมาชิกใหม่</span>
+                {pendingRegistrationsCount > 0 && (
+                  <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ml-1 ${
+                    userSubTab === 'pending_approvals' ? 'bg-amber-950 text-amber-200' : 'bg-amber-500 text-white animate-pulse'
+                  }`}>
+                    {pendingRegistrationsCount}
+                  </span>
+                )}
+              </button>
+
               <button
                 onClick={() => setUserSubTab('list')}
                 className={`flex items-center space-x-1.5 px-4 py-2 rounded-lg transition ${
@@ -943,13 +1101,14 @@ export const AdminManagement: React.FC<AdminProps> = ({
                 }`}
               >
                 <Users className="w-4 h-4" />
-                <span>รายชื่อผู้ใช้และสิทธิ์ ({filteredUsers.length})</span>
+                <span>รายชื่อผู้ใช้ทั้งหมด ({filteredUsers.length})</span>
               </button>
+
               <button
                 onClick={() => setUserSubTab('roles_matrix')}
                 className={`flex items-center space-x-1.5 px-4 py-2 rounded-lg transition ${
                   userSubTab === 'roles_matrix'
-                    ? 'bg-amber-500 text-slate-950 shadow-sm'
+                    ? 'bg-teal-700 text-white shadow-sm'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -958,14 +1117,26 @@ export const AdminManagement: React.FC<AdminProps> = ({
               </button>
             </div>
 
-            {/* User Action Button */}
-            <button
-              onClick={handleOpenAddUser}
-              className="flex items-center justify-center space-x-1.5 px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition shadow-sm shrink-0"
-            >
-              <UserPlus className="w-4 h-4" />
-              <span>เพิ่มผู้ใช้งานใหม่</span>
-            </button>
+            {/* Action Buttons: Export & Add User */}
+            <div className="flex items-center space-x-2">
+              <button
+                type="button"
+                onClick={handleExportRegistrationsCSV}
+                title="ส่งออกรายชื่อผู้ใช้และข้อมูลการสมัครเป็น CSV"
+                className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition"
+              >
+                <FileDown className="w-4 h-4 text-slate-600" />
+                <span>ส่งออก CSV</span>
+              </button>
+
+              <button
+                onClick={handleOpenAddUser}
+                className="flex items-center justify-center space-x-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition shadow-sm shrink-0"
+              >
+                <UserPlus className="w-4 h-4" />
+                <span>เพิ่มผู้ใช้งานใหม่</span>
+              </button>
+            </div>
           </div>
 
           {/* SUB-TAB 1: USER LIST WITH INDIVIDUAL PERMISSIONS & ACTIONS */}
@@ -1181,7 +1352,333 @@ export const AdminManagement: React.FC<AdminProps> = ({
             </div>
           )}
 
-          {/* SUB-TAB 2: DEFAULT ROLES PERMISSIONS MATRIX VIEW */}
+          {/* SUB-TAB 2: PENDING USER REGISTRATIONS & APPROVALS */}
+          {userSubTab === 'pending_approvals' && (
+            <div className="space-y-4">
+              {/* Header Info & Filtering Toolbar */}
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                  <div>
+                    <h3 className="font-bold text-slate-800 text-sm flex items-center space-x-2">
+                      <Clock3 className="w-4 h-4 text-amber-600" />
+                      <span>ระบบตรวจสอบและอนุมัติสมาชิกใหม่ (User Registration Approvals)</span>
+                    </h3>
+                    <p className="text-xs text-slate-600 mt-0.5">
+                      เจ้าหน้าที่ผู้ดูแลระบบ (Admin) ตรวจสอบความถูกต้องของนักศึกษาแพทย์/บุคลากร และกำหนดสิทธิ์การใช้งานก่อนเข้าสู่ระบบ
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleExportRegistrationsCSV}
+                    className="self-start md:self-auto flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition"
+                  >
+                    <FileDown className="w-3.5 h-3.5" />
+                    <span>ดาวน์โหลดรายชื่อผู้สมัคร (CSV)</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="relative sm:col-span-2">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      placeholder="ค้นหาชื่อผู้สมัคร, รหัสนักศึกษา, อีเมล, ภาควิชา, เบอร์โทร..."
+                      value={pendingSearch}
+                      onChange={(e) => setPendingSearch(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                  </div>
+
+                  <div>
+                    <select
+                      value={pendingFilter}
+                      onChange={(e) => setPendingFilter(e.target.value as any)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    >
+                      <option value="pending">⏳ รอการอนุมัติ (Pending - {pendingRegistrationsCount} รายการ)</option>
+                      <option value="approved">✅ อนุมัติแล้ว (Approved)</option>
+                      <option value="rejected">❌ ไม่อนุมัติ (Rejected)</option>
+                      <option value="all">📋 ทุกสถานะ (All Applicants)</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Filter Quick Pills */}
+                <div className="flex items-center flex-wrap gap-2 pt-1">
+                  <button
+                    onClick={() => setPendingFilter('pending')}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 ${
+                      pendingFilter === 'pending'
+                        ? 'bg-amber-500 text-slate-950 shadow-sm'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    <span>รออนุมัติ</span>
+                    <span className="bg-amber-950 text-amber-200 text-[10px] px-1.5 py-0.2 rounded-full">
+                      {users.filter(u => u.approvalStatus === 'pending').length}
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() => setPendingFilter('approved')}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 ${
+                      pendingFilter === 'approved'
+                        ? 'bg-emerald-600 text-white shadow-sm'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    <span>อนุมัติแล้ว</span>
+                    <span className="bg-emerald-800 text-emerald-100 text-[10px] px-1.5 py-0.2 rounded-full">
+                      {users.filter(u => u.approvalStatus === 'approved' || !u.approvalStatus).length}
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() => setPendingFilter('rejected')}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 ${
+                      pendingFilter === 'rejected'
+                        ? 'bg-rose-600 text-white shadow-sm'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    <span>ไม่อนุมัติ</span>
+                    <span className="bg-rose-900 text-rose-100 text-[10px] px-1.5 py-0.2 rounded-full">
+                      {users.filter(u => u.approvalStatus === 'rejected').length}
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() => setPendingFilter('all')}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition ${
+                      pendingFilter === 'all'
+                        ? 'bg-slate-800 text-white shadow-sm'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    <span>ทั้งหมด ({users.length})</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Pending Applicants List */}
+              <div className="grid grid-cols-1 gap-4">
+                {filteredPendingUsers.length > 0 ? (
+                  filteredPendingUsers.map((applicant) => {
+                    const status = applicant.approvalStatus || 'approved';
+                    const isPending = status === 'pending';
+                    const isApproved = status === 'approved';
+                    const isRejected = status === 'rejected';
+
+                    return (
+                      <div
+                        key={applicant.uid}
+                        className={`bg-white rounded-2xl border p-5 shadow-sm space-y-4 transition ${
+                          isPending 
+                            ? 'border-amber-300 ring-2 ring-amber-400/20 bg-amber-50/20' 
+                            : isRejected 
+                            ? 'border-rose-200 bg-rose-50/10' 
+                            : 'border-slate-200'
+                        }`}
+                      >
+                        {/* Header Row */}
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                          <div className="flex items-start space-x-3.5">
+                            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-teal-700 to-emerald-600 text-white flex items-center justify-center font-bold text-base shadow-sm shrink-0 border border-teal-400/30">
+                              {applicant.displayName.charAt(0)}
+                            </div>
+                            <div>
+                              <div className="flex items-center flex-wrap gap-2">
+                                <h4 className="text-sm font-bold text-slate-900">{applicant.displayName}</h4>
+                                {applicant.studentId && (
+                                  <span className="text-[11px] font-bold font-mono px-2 py-0.5 bg-slate-100 border border-slate-200 text-slate-700 rounded-md">
+                                    รหัส: {applicant.studentId}
+                                  </span>
+                                )}
+                                <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-teal-100 text-teal-800 border border-teal-200">
+                                  {applicant.role === 'admin' ? '⚡ ผู้ดูแลระบบ' : applicant.role === 'resident' ? '🩺 แพทย์ประจำบ้าน' : applicant.role === 'staff' ? '👨‍🏫 อาจารย์แพทย์' : '🎓 นักศึกษาแพทย์'}
+                                </span>
+                              </div>
+                              <div className="text-xs text-slate-500 flex items-center gap-3 mt-1 flex-wrap">
+                                <span className="flex items-center gap-1">
+                                  <Mail className="w-3.5 h-3.5 text-slate-400" />
+                                  <span>{applicant.email}</span>
+                                </span>
+                                {applicant.phone && (
+                                  <span className="flex items-center gap-1">
+                                    <Phone className="w-3.5 h-3.5 text-slate-400" />
+                                    <span>{applicant.phone}</span>
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Status Badge */}
+                          <div>
+                            {isPending && (
+                              <span className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                                <Clock3 className="w-4 h-4 text-amber-600 animate-spin" />
+                                <span>รอการตรวจสอบและอนุมัติ</span>
+                              </span>
+                            )}
+                            {isApproved && (
+                              <span className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-100 text-emerald-900 border border-emerald-300">
+                                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                                <span>อนุมัติสิทธิ์เรียบร้อยแล้ว</span>
+                              </span>
+                            )}
+                            {isRejected && (
+                              <span className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-rose-100 text-rose-900 border border-rose-300">
+                                <XCircle className="w-4 h-4 text-rose-600" />
+                                <span>ไม่อนุมัติคำขอ</span>
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Details Grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs bg-slate-50 p-3.5 rounded-xl border border-slate-100">
+                          <div>
+                            <span className="text-slate-400 text-[11px] block font-medium">สังกัด / ภาควิชา:</span>
+                            <span className="font-bold text-slate-800">{applicant.department || 'ไม่ระบุ'}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 text-[11px] block font-medium">ระดับชั้นปี / ตำแหน่ง:</span>
+                            <span className="font-bold text-slate-800">{applicant.academicYear || applicant.position || 'นักศึกษาแพทย์'}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 text-[11px] block font-medium">วันที่ยื่นคำขอสมัคร:</span>
+                            <span className="font-bold text-slate-800">
+                              {applicant.registeredAt ? new Date(applicant.registeredAt).toLocaleString('th-TH') : (applicant.createdAt ? new Date(applicant.createdAt).toLocaleString('th-TH') : '-')}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Registration Reason Box */}
+                        {applicant.registrationReason && (
+                          <div className="bg-teal-50/60 border border-teal-100 rounded-xl p-3 text-xs text-teal-950 flex items-start space-x-2.5">
+                            <MessageSquare className="w-4 h-4 text-teal-700 mt-0.5 shrink-0" />
+                            <div>
+                              <span className="font-bold text-teal-900 block text-[11px]">วัตถุประสงค์ในการขอเข้าใช้งาน:</span>
+                              <p className="mt-0.5 text-slate-700 italic leading-relaxed">"{applicant.registrationReason}"</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Rejection Notice if rejected */}
+                        {isRejected && applicant.rejectionReason && (
+                          <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 text-xs text-rose-900 flex items-start space-x-2.5">
+                            <AlertTriangle className="w-4 h-4 text-rose-600 mt-0.5 shrink-0" />
+                            <div>
+                              <span className="font-bold block text-[11px]">เหตุผลที่ไม่อนุมัติ:</span>
+                              <p className="mt-0.5 text-rose-800">{applicant.rejectionReason}</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Approved Audit Info */}
+                        {isApproved && (applicant.approvedBy || applicant.approvedAt) && (
+                          <div className="text-[11px] text-slate-500 flex items-center gap-2">
+                            <CheckCheck className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>อนุมัติโดย: <strong>{applicant.approvedBy || 'Admin ผู้ดูแลระบบ'}</strong></span>
+                            {applicant.approvedAt && (
+                              <span>เมื่อ: {new Date(applicant.approvedAt).toLocaleString('th-TH')}</span>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Action Buttons */}
+                        <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
+                          <span className="text-[10px] text-slate-400 font-mono">UID: {applicant.uid}</span>
+
+                          <div className="flex items-center flex-wrap gap-2">
+                            {isPending && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenRejectModal(applicant)}
+                                  className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition"
+                                >
+                                  <XCircle className="w-4 h-4 text-rose-600" />
+                                  <span>ปฏิเสธคำขอ (Reject)</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleQuickApprove(applicant)}
+                                  className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 transition"
+                                >
+                                  <Check className="w-4 h-4 text-emerald-700" />
+                                  <span>อนุมัติด่วน (1-Click Approve)</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenApproveModal(applicant)}
+                                  className="flex items-center space-x-1.5 px-4 py-1.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 shadow-sm transition"
+                                >
+                                  <CheckCircle2 className="w-4 h-4" />
+                                  <span>อนุมัติและกำหนดสิทธิ์...</span>
+                                </button>
+                              </>
+                            )}
+
+                            {isApproved && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenEditUser(applicant)}
+                                  className="flex items-center space-x-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition"
+                                >
+                                  <Pencil className="w-3.5 h-3.5 text-teal-700" />
+                                  <span>ปรับปรุงสิทธิ์/ข้อมูล</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleUserStatus(applicant)}
+                                  className={`flex items-center space-x-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition border ${
+                                    applicant.status === 'inactive'
+                                      ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                                      : 'text-amber-700 bg-amber-50 border-amber-200'
+                                  }`}
+                                >
+                                  <Power className="w-3.5 h-3.5" />
+                                  <span>{applicant.status === 'inactive' ? 'เปิดใช้งาน' : 'ระงับชั่วคราว'}</span>
+                                </button>
+                              </>
+                            )}
+
+                            {isRejected && (
+                              <button
+                                type="button"
+                                onClick={() => handleOpenApproveModal(applicant)}
+                                className="flex items-center space-x-1.5 px-4 py-1.5 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-sm transition"
+                              >
+                                <CheckCircle2 className="w-4 h-4" />
+                                <span>ทบทวนและอนุมัติใหม่ (Re-Approve)</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center text-slate-500 text-xs space-y-2">
+                    <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                      <Clock3 className="w-6 h-6" />
+                    </div>
+                    <div className="font-bold text-slate-700 text-sm">ไม่พบคำขอสมัครสมาชิกในหมวดหมู่นี้</div>
+                    <p className="text-slate-500">
+                      เมื่อผู้ใช้งานลงทะเบียนผ่านหน้าเว็บ คำขอจะปรากฏที่นี่เพื่อให้ Admin อนุมัติสิทธิ์
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* SUB-TAB 3: DEFAULT ROLES PERMISSIONS MATRIX VIEW */}
           {userSubTab === 'roles_matrix' && (
             <div className="space-y-6">
               <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-2">
@@ -1645,8 +2142,8 @@ export const AdminManagement: React.FC<AdminProps> = ({
                     onChange={(e) => handleRoleSelectInForm(e.target.value as UserRole)}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500"
                   >
-                    <option value="user">1. ผู้ใช้งานทั่วไป (User - คนใช้)</option>
-                    <option value="admin">2. ผู้ดูแลระบบ (Admin - หลังบ้าน)</option>
+                    <option value="user">1. ผู้ใช้งานทั่วไป (User - ผู้ใช้)</option>
+                    <option value="admin">2. ผู้ดูแลระบบ (Admin - ผู้จัดการ)</option>
                   </select>
                 </div>
 
@@ -1849,6 +2346,162 @@ export const AdminManagement: React.FC<AdminProps> = ({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== APPROVE USER MODAL ==================== */}
+      {approveModalUser && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center space-x-2">
+                <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
+                  <UserCheck className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-800">อนุมัติคำขอสมัครสมาชิก</h3>
+                  <p className="text-[11px] text-slate-500">กำหนดบทบาทและเปิดการใช้งานระบบ</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setApproveModalUser(null)}
+                className="p-1 rounded-xl text-slate-400 hover:bg-slate-100 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-slate-500">ชื่อ-สกุล:</span>
+                <span className="font-bold text-slate-900">{approveModalUser.displayName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">อีเมล:</span>
+                <span className="font-medium text-slate-700">{approveModalUser.email}</span>
+              </div>
+              {approveModalUser.studentId && (
+                <div className="flex justify-between">
+                  <span className="text-slate-500">รหัสนักศึกษา:</span>
+                  <span className="font-mono font-bold text-teal-700">{approveModalUser.studentId}</span>
+                </div>
+              )}
+              {approveModalUser.department && (
+                <div className="flex justify-between">
+                  <span className="text-slate-500">ภาควิชา / สังกัด:</span>
+                  <span className="font-medium text-slate-700">{approveModalUser.department}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">
+                  กำหนดระดับบทบาทผู้ใช้งาน (Role)
+                </label>
+                <select
+                  value={approveSelectedRole}
+                  onChange={(e) => setApproveSelectedRole(e.target.value as UserRole)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                  <option value="user">👤 ผู้ใช้งานทั่วไป (User - ผู้ใช้ระบบ)</option>
+                  <option value="admin">⚡ ผู้ดูแลระบบศูนย์ฯ (System Administrator)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">
+                  บันทึกข้อความจาก Admin ถึงผู้สมัคร (ทางเลือก)
+                </label>
+                <textarea
+                  rows={2}
+                  value={approveNote}
+                  onChange={(e) => setApproveNote(e.target.value)}
+                  placeholder="เช่น ยืนยันข้อมูลในระบบแล้ว พร้อมใช้งานห้องเรียนและหอพัก..."
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setApproveModalUser(null)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition"
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmApproveUser}
+                className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 shadow-sm transition"
+              >
+                ยืนยันการอนุมัติสิทธิ์
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== REJECT USER MODAL ==================== */}
+      {rejectModalUser && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center space-x-2">
+                <div className="p-2 bg-rose-50 text-rose-600 rounded-xl">
+                  <XCircle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-800">ปฏิเสธคำขอสมัครสมาชิก</h3>
+                  <p className="text-[11px] text-slate-500">ระบุเหตุผลเพื่อให้ผู้สมัครทราบและแก้ไข</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setRejectModalUser(null)}
+                className="p-1 rounded-xl text-slate-400 hover:bg-slate-100 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="bg-rose-50/50 p-3 rounded-2xl border border-rose-100 text-xs">
+              <p className="text-slate-700">
+                คุณกำลังจะปฏิเสธคำขอสมัครของ <strong className="text-rose-900">{rejectModalUser.displayName}</strong> ({rejectModalUser.email})
+              </p>
+            </div>
+
+            <div className="space-y-2 text-xs">
+              <label className="block text-slate-700 font-bold">
+                เหตุผลที่ไม่อนุมัติ <span className="text-rose-500">*</span>
+              </label>
+              <textarea
+                rows={3}
+                required
+                value={rejectReasonText}
+                onChange={(e) => setRejectReasonText(e.target.value)}
+                placeholder="ระบุเหตุผล เช่น ไม่พบรหัสนักศึกษาในฐานข้อมูลชั้นคลินิก, กรุณาใช้อีเมลสถาบัน, ข้อมูลไม่ครบถ้วน..."
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-rose-500"
+              />
+            </div>
+
+            <div className="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setRejectModalUser(null)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition"
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmRejectUser}
+                className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 shadow-sm transition"
+              >
+                ยืนยันการปฏิเสธ
+              </button>
+            </div>
           </div>
         </div>
       )}

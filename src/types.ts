@@ -10,6 +10,8 @@ export interface UserPermissions {
   maxBookingHoursPerDay: number;
 }
 
+export type UserApprovalStatus = 'pending' | 'approved' | 'rejected';
+
 export interface UserProfile {
   uid: string;
   displayName: string;
@@ -18,8 +20,16 @@ export interface UserProfile {
   role: UserRole;
   department: string;
   academicYear?: string; // e.g. 'ชั้นปีที่ 4', 'ชั้นปีที่ 5', 'ชั้นปีที่ 6', 'แพทย์ฝึกหัด'
+  studentId?: string; // รหัสนักศึกษา / รหัสบุคลากร
+  position?: string; // ตำแหน่ง / หน้าที่
   phone?: string;
   status?: 'active' | 'inactive';
+  approvalStatus?: UserApprovalStatus; // สถานะการอนุมัติ: 'pending' (รออนุมัติ), 'approved' (อนุมัติแล้ว), 'rejected' (ปฏิเสธ)
+  registrationReason?: string; // เหตุผลหรือวัตถุประสงค์ในการขอเข้าใช้งาน
+  registeredAt?: string;
+  approvedAt?: string;
+  approvedBy?: string;
+  rejectionReason?: string;
   permissions?: UserPermissions;
   createdAt?: string;
   updatedAt?: string;
@@ -155,3 +165,31 @@ export interface DailyBookingTrend {
   bookingsCount: number;
   approvedCount: number;
 }
+
+export type AttendanceStatus = 'on_time' | 'late' | 'early_leave' | 'completed' | 'on_duty';
+export type ShiftType = 'morning' | 'afternoon' | 'night' | 'full_day' | 'on_call_ward' | 'weekend_duty';
+
+export interface AttendanceRecord {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  userRole: UserRole;
+  department: string;
+  academicYear?: string;
+  date: string; // YYYY-MM-DD
+  checkInTime: string; // HH:mm:ss or HH:mm
+  checkOutTime?: string; // HH:mm:ss or HH:mm
+  shiftType: ShiftType;
+  shiftName: string;
+  location: string;
+  status: AttendanceStatus;
+  note?: string;
+  adminNote?: string;
+  verifiedByAdmin?: boolean;
+  verifiedAt?: string;
+  workingHours?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+

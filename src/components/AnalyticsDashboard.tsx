@@ -215,7 +215,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsProps> = ({ bookings, rooms, 
           ) : (
             <div className="flex items-center space-x-1.5 px-3 py-1.5 bg-amber-50 text-amber-800 border border-amber-200/80 rounded-xl text-xs font-medium">
               <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
-              <span>ดาวน์โหลด / พิมพ์รายงาน (เฉพาะ Admin หลังบ้านเท่านั้น)</span>
+              <span>ดาวน์โหลด / พิมพ์รายงาน (เฉพาะ Admin ผู้จัดการเท่านั้น)</span>
             </div>
           )}
         </div>

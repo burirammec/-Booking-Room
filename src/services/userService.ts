@@ -81,3 +81,55 @@ export async function deleteUserFromFirestore(userId: string) {
     handleFirestoreError(error, OperationType.DELETE, `/${USERS_COLLECTION}/${userId}`);
   }
 }
+
+// User Registration & Approval Workflow
+export async function registerUserInFirestore(userData: Partial<UserProfile> & { uid: string; displayName: string; email: string }) {
+  const newUser: UserProfile = {
+    role: 'user',
+    department: userData.department || 'ผู้ใช้งานทั่วไป',
+    status: 'inactive',
+    approvalStatus: 'pending',
+    registeredAt: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    ...userData
+  };
+  try {
+    await setDoc(doc(db, USERS_COLLECTION, newUser.uid), newUser);
+    return newUser;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, `/${USERS_COLLECTION}/${newUser.uid}`);
+    return newUser;
+  }
+}
+
+export async function approveUserInFirestore(userId: string, adminEmail: string, customData?: Partial<UserProfile>) {
+  try {
+    await updateDoc(doc(db, USERS_COLLECTION, userId), {
+      status: 'active',
+      approvalStatus: 'approved',
+      approvedAt: new Date().toISOString(),
+      approvedBy: adminEmail,
+      rejectionReason: '',
+      updatedAt: new Date().toISOString(),
+      ...(customData || {})
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, `/${USERS_COLLECTION}/${userId}`);
+  }
+}
+
+export async function rejectUserInFirestore(userId: string, adminEmail: string, reason: string) {
+  try {
+    await updateDoc(doc(db, USERS_COLLECTION, userId), {
+      status: 'inactive',
+      approvalStatus: 'rejected',
+      approvedBy: adminEmail,
+      rejectionReason: reason || 'ไม่ผ่านเกณฑ์การอนุมัติ กรุณาติดต่อเจ้าหน้าที่',
+      updatedAt: new Date().toISOString()
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, `/${USERS_COLLECTION}/${userId}`);
+  }
+}
+

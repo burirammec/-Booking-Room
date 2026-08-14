@@ -10,7 +10,8 @@ import {
   User, 
   ShieldAlert,
   GraduationCap,
-  Zap
+  Zap,
+  UserPlus
 } from 'lucide-react';
 import { UserProfile, UserRole } from '../types';
 
@@ -22,6 +23,7 @@ interface HeaderProps {
   onLogout: () => void;
   onSelectRole: (role: UserRole) => void;
   onOpenLoginModal?: () => void;
+  onOpenRegisterModal?: () => void;
   pendingCount: number;
 }
 
@@ -33,6 +35,7 @@ export const Header: React.FC<HeaderProps> = ({
   onLogout,
   onSelectRole,
   onOpenLoginModal,
+  onOpenRegisterModal,
   pendingCount
 }) => {
   return (
@@ -73,7 +76,7 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               <User className="w-3.5 h-3.5" />
-              <span>1. คนใช้ (User)</span>
+              <span>1. ผู้ใช้ (User)</span>
             </button>
             <button
               onClick={() => onSelectRole('admin')}
@@ -84,11 +87,11 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               <ShieldAlert className="w-3.5 h-3.5 text-amber-200" />
-              <span>2. หลังบ้าน Admin</span>
+              <span>2. ผู้จัดการ Admin</span>
             </button>
           </div>
 
-          {/* User Profile / Gmail Sign-in */}
+          {/* User Profile / Registration / Gmail Sign-in */}
           {currentUser ? (
             <div className="flex items-center space-x-2 bg-emerald-900 border border-emerald-800 rounded-lg px-3 py-1.5">
               <img
@@ -103,11 +106,11 @@ export const Header: React.FC<HeaderProps> = ({
                 <div className="text-[10px] truncate max-w-[150px] flex items-center gap-1">
                   {currentUser.role === 'admin' ? (
                     <span className="text-amber-300 font-bold bg-amber-950/80 px-1 py-0.2 rounded border border-amber-500/30">
-                      ⚡ หลังบ้าน Admin
+                      ⚡ ผู้จัดการ Admin
                     </span>
                   ) : (
                     <span className="text-emerald-300 font-medium">
-                      👤 คนใช้ ({currentUser.department || 'ผู้ใช้งานทั่วไป'})
+                      👤 ผู้ใช้ ({currentUser.department || 'ผู้ใช้งานทั่วไป'})
                     </span>
                   )}
                 </div>
@@ -128,16 +131,28 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             </div>
           ) : (
-            <button
-              onClick={onOpenLoginModal || onLoginWithGoogle}
-              className="flex items-center space-x-2 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow-md transition-all active:scale-95"
-            >
-              <LogIn className="w-4 h-4" />
-              <span>เข้าสู่ระบบด้วย Gmail</span>
-            </button>
+            <div className="flex items-center space-x-2">
+              {onOpenRegisterModal && (
+                <button
+                  onClick={onOpenRegisterModal}
+                  className="flex items-center space-x-1.5 bg-emerald-900/90 hover:bg-emerald-800 text-emerald-200 hover:text-white border border-emerald-700/80 font-bold text-xs px-3 py-2 rounded-xl transition-all active:scale-95 shadow-sm"
+                >
+                  <UserPlus className="w-4 h-4 text-emerald-400" />
+                  <span>สมัครสมาชิก (User)</span>
+                </button>
+              )}
+              <button
+                onClick={onOpenLoginModal || onLoginWithGoogle}
+                className="flex items-center space-x-2 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow-md transition-all active:scale-95"
+              >
+                <LogIn className="w-4 h-4" />
+                <span>เข้าสู่ระบบ</span>
+              </button>
+            </div>
           )}
         </div>
       </div>
+
 
       {/* Navigation Tabs */}
       <div className="bg-emerald-950/90 border-t border-emerald-900 px-4 sm:px-6 lg:px-8">
@@ -202,7 +217,23 @@ export const Header: React.FC<HeaderProps> = ({
             <span>ค่าไฟฟ้าหอพัก</span>
           </button>
 
+          <button
+            onClick={() => setActiveTab('attendance')}
+            className={`flex items-center space-x-2 px-3.5 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+              activeTab === 'attendance'
+                ? 'bg-emerald-600 text-white shadow-sm font-bold ring-1 ring-emerald-300'
+                : 'text-emerald-100 hover:bg-emerald-900 hover:text-white'
+            }`}
+          >
+            <LogIn className="w-4 h-4 text-amber-300" />
+            <span>เข้างาน (ลงเวลา/ตรวจสอบ)</span>
+            <span className="bg-amber-400 text-emerald-950 font-black text-[10px] px-1.5 py-0.2 rounded-full">
+              {currentUser?.role === 'admin' ? 'Admin & User' : 'User'}
+            </span>
+          </button>
+
           {currentUser?.role === 'admin' && (
+
             <button
               onClick={() => setActiveTab('admin')}
               className={`flex items-center space-x-2 px-3.5 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-colors relative ${
@@ -212,7 +243,7 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               <CheckSquare className="w-4 h-4 text-amber-200" />
-              <span>ระบบหลังบ้าน Admin (อนุมัติจอง/จัดการ)</span>
+              <span>ระบบผู้จัดการ Admin (อนุมัติจอง/จัดการ)</span>
               {pendingCount > 0 && (
                 <span className="bg-rose-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full ml-1 animate-pulse">
                   {pendingCount}

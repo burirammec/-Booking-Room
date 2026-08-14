@@ -45,7 +45,7 @@ export const RoomList: React.FC<RoomListProps> = ({
   ];
 
   const equipmentOptions = [
-    { id: 'projector', label: 'โพรเจกเตอร์', icon: Airplay },
+    { id: 'projector', label: 'โปรเจกเตอร์', icon: Airplay },
     { id: 'smartBoard', label: 'Smart Display / Board', icon: Tv },
     { id: 'microphone', label: 'ไมโครโฟนไร้สาย', icon: Mic },
     { id: 'hybridZoom', label: 'Hybrid Zoom / VDO', icon: Video },
@@ -308,7 +308,7 @@ export const RoomList: React.FC<RoomListProps> = ({
                     {room.equipment.projector && (
                       <span className="inline-flex items-center space-x-1 text-[11px] bg-slate-100 text-slate-700 px-2 py-1 rounded-md">
                         <Airplay className="w-3 h-3 text-slate-500" />
-                        <span>โพรเจกเตอร์</span>
+                        <span>โปรเจกเตอร์</span>
                       </span>
                     )}
                     {room.equipment.smartBoard && (

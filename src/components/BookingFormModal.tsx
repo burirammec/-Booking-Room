@@ -43,7 +43,7 @@ export const BookingFormModal: React.FC<BookingFormProps> = ({
   const [attendeesCount, setAttendeesCount] = useState<number>(20);
   const [department, setDepartment] = useState(currentUser?.department || DEPARTMENTS[0]);
   const [contactPhone, setContactPhone] = useState(currentUser?.phone || '081-123-4567');
-  const [requestedEquipment, setRequestedEquipment] = useState<string[]>(['โพรเจกเตอร์', 'เครื่องปรับอากาศ']);
+  const [requestedEquipment, setRequestedEquipment] = useState<string[]>(['โปรเจกเตอร์', 'เครื่องปรับอากาศ']);
 
   const activeRoom = rooms.find(r => r.id === roomId) || rooms[0];
 

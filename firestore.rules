@@ -16,6 +16,9 @@ service cloud.firestore {
     match /electricity_bills/{billId} {
       allow read, write: if true;
     }
+    match /attendance_records/{attendanceId} {
+      allow read, write: if true;
+    }
   }
 }
 
