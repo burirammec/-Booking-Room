@@ -204,7 +204,7 @@ export const AdminManagement: React.FC<AdminProps> = ({
       building: 'อาคารศูนย์แพทยศาสตรศึกษาชั้นคลินิก',
       floor: 'ชั้น 9',
       capacity: 40,
-      description: 'ห้องเรียนปรับอากาศพร้อมโปรเจกเตอร์และระบบเสียงคุณภาพสูง',
+      description: 'ห้องเรียนปรับอากาศพร้อมโปรเจคเตอร์และระบบเสียงคุณภาพสูง',
       image: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&q=80&w=800',
       isAvailable: true,
       equipment: {
@@ -283,7 +283,7 @@ export const AdminManagement: React.FC<AdminProps> = ({
       startTime: '09:00',
       endTime: '12:00',
       attendeesCount: 20,
-      requestedEquipment: ['โปรเจกเตอร์ / จอภาพ', 'ไมโครโฟน / ลำโพง'],
+      requestedEquipment: ['โปรเจคเตอร์ / จอภาพ', 'ไมโครโฟน / ลำโพง'],
       contactPhone: '044-602-000',
       status: 'approved',
       adminNote: 'บันทึกคำขอโดยผู้ดูแลระบบผู้จัดการ',
@@ -320,7 +320,7 @@ export const AdminManagement: React.FC<AdminProps> = ({
       startTime: bookingForm.startTime || '09:00',
       endTime: bookingForm.endTime || '12:00',
       attendeesCount: Number(bookingForm.attendeesCount) || 10,
-      requestedEquipment: bookingForm.requestedEquipment || ['โปรเจกเตอร์'],
+      requestedEquipment: bookingForm.requestedEquipment || ['โปรเจคเตอร์'],
       contactPhone: bookingForm.contactPhone || '081-234-5678',
       status: bookingForm.status || 'pending',
       adminNote: bookingForm.adminNote || '',
@@ -961,7 +961,7 @@ export const AdminManagement: React.FC<AdminProps> = ({
                       <div className="flex flex-wrap gap-1 pt-1">
                         {room.equipment?.projector && (
                           <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[10px]">
-                            โปรเจกเตอร์
+                            โปรเจคเตอร์
                           </span>
                         )}
                         {room.equipment?.smartBoard && (

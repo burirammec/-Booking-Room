@@ -43,7 +43,7 @@ export const BookingFormModal: React.FC<BookingFormProps> = ({
   const [attendeesCount, setAttendeesCount] = useState<number>(20);
   const [department, setDepartment] = useState(currentUser?.department || DEPARTMENTS[0]);
   const [contactPhone, setContactPhone] = useState(currentUser?.phone || '081-123-4567');
-  const [requestedEquipment, setRequestedEquipment] = useState<string[]>(['โปรเจกเตอร์', 'เครื่องปรับอากาศ']);
+  const [requestedEquipment, setRequestedEquipment] = useState<string[]>(['โปรเจคเตอร์', 'เครื่องปรับอากาศ']);
 
   const activeRoom = rooms.find(r => r.id === roomId) || rooms[0];
 
@@ -289,7 +289,7 @@ export const BookingFormModal: React.FC<BookingFormProps> = ({
               อุปกรณ์เพิ่มเติมที่ขอใช้งาน:
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
-              {['โปรเจกเตอร์', 'ไมโครโฟนไร้สาย', 'ระบบ Hybrid Zoom', 'หุ่นฝึกซ้อมหัตถการ', 'เครื่องปรับอากาศ', 'กระดาน Smart Board'].map(item => (
+              {['โปรเจคเตอร์', 'ไมโครโฟนไร้สาย', 'ระบบ Hybrid Zoom', 'หุ่นฝึกซ้อมหัตถการ', 'เครื่องปรับอากาศ', 'กระดาน Smart Board'].map(item => (
                 <label
                   key={item}
                   className={`flex items-center space-x-2 p-2 rounded-xl border cursor-pointer transition ${
